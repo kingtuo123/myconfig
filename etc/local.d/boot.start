@@ -1,0 +1,3 @@
+sudo -u king pulseaudio --start -D&
+
+/etc/local.d/wifi &

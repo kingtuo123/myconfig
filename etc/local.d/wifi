@@ -1,0 +1,63 @@
+#!/bin/bash
+device="wlp2s0"
+
+if [ $EUID -ne 0 ]
+then
+    echo "`basename $0`: you must be superuser!"
+    exit 1
+fi
+
+ip link set ${device} up 
+
+function connect_net(){
+   wpa_supplicant -i ${device} -c /etc/wpa_supplicant/$1 -B && sleep 1
+   echo "getting ip ,plz wait for a whlie ......"
+   dhclient  ${device}
+}
+function kill_net(){
+    pgrep wpa_supplicant > /dev/null &&  killall wpa_supplicant &&
+    pgrep dhclient > /dev/null && killall dhclient
+}
+
+
+if [ ! -f "/etc/wpa_supplicant/.wifi" ];then
+    touch "/etc/wpa_supplicant/.wifi"
+fi
+
+list=($(ls /etc/wpa_supplicant/|grep -iv "\."))
+
+
+scan=($(iw dev wlp2s0 scan | grep -i ssid|sed s/^.*:\ //g))
+last=$(cat /etc/wpa_supplicant/.wifi)
+newlist=()
+
+
+newlist[1]=$last
+i=2
+for x in ${list[*]}
+do
+    if [ "$last" != "$x" ];then
+        newlist[$i]=$x
+        ((i++))
+    fi
+done
+
+
+exist=""
+for y in ${newlist[*]}
+do
+    for x in ${scan[*]}
+    do
+        if [ "$y" = "$x" ];then
+            exist=$y
+            break 2
+        fi
+    done
+done
+
+
+if [[ $exist != "" ]];then
+    kill_net
+    connect_net $exist
+    echo $exist > "/etc/wpa_supplicant/.wifi"
+fi
