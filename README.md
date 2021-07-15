@@ -1,1 +1,1 @@
-# myconfig
+my config files of gentoo
